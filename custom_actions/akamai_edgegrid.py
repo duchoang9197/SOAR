@@ -3,7 +3,8 @@ import hmac
 import base64
 import datetime
 import uuid
-import requests
+import http.client
+import json
 
 def sign_and_send_request(method, path, body, client_token, client_secret, access_token, host):
     timestamp = datetime.datetime.utcnow().strftime('%Y%m%dT%H:%M:%S+0000')
@@ -17,15 +18,16 @@ def sign_and_send_request(method, path, body, client_token, client_secret, acces
 
     auth_header = f'EG1-HMAC-SHA256 client_token={client_token};access_token={access_token};timestamp={timestamp};nonce={nonce};signature={signature_base64}'
 
-    url = f'https://{host}{path}'
+    conn = http.client.HTTPSConnection(host)
     headers = {
         'Authorization': auth_header,
         'Content-Type': 'application/json',
         'Host': host
     }
-
-    response = requests.request(method, url, headers=headers, data=body)
+    conn.request(method, path, body, headers)
+    res = conn.getresponse()
+    data = res.read()
     return {
-        "status_code": response.status_code,
-        "response": response.json()
+        "status_code": res.status,
+        "response": json.loads(data.decode("utf-8"))
     }
