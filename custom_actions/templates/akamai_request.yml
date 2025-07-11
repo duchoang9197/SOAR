@@ -1,0 +1,48 @@
+type: action
+definition:
+  title: "Gửi yêu cầu đến Akamai API"
+  description: "Gửi yêu cầu HTTP được ký bằng EdgeGrid đến Akamai API"
+  namespace: tools.akamai
+  name: send_signed_request
+  secrets:
+    - name: akamai_credentials
+      keys:
+        - client_token
+        - client_secret
+        - access_token
+        - host
+  expects:
+    method:
+      type: string
+      description: "Phương thức HTTP (GET, POST, v.v.)"
+    path:
+      type: string
+      description: "Đường dẫn API (ví dụ: /path/to/resource)"
+    body:
+      type: string
+      description: "Nội dung yêu cầu (nếu có)"
+      default: ""
+  steps:
+    - ref: send_request
+      action: core.script.run_python
+      args:
+        script: |
+          from akamai_edgegrid import sign_and_send_request
+
+          result = sign_and_send_request(
+              method=inputs.method,
+              path=inputs.path,
+              body=inputs.body,
+              client_token=SECRETS.akamai_credentials.client_token,
+              client_secret=SECRETS.akamai_credentials.client_secret,
+              access_token=SECRETS.akamai_credentials.access_token,
+              host=SECRETS.akamai_credentials.host
+          )
+
+          return result
+        dependencies:
+          - requests
+        allow_network: true
+  returns:
+    status_code: ${{ steps.send_request.result.status_code }}
+    response: ${{ steps.send_request.result.response }}
